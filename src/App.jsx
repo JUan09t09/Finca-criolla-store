@@ -1098,6 +1098,7 @@ function EstiloGlobal() {
       .marca-texto{ display:flex; flex-direction:column; text-align:left; line-height:1.15; }
       .marca-texto strong{ font-family:'Fraunces', serif; font-size: 19px; color: var(--crema); }
       .marca-texto em{ font-style: normal; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--oro-suave); }
+      .marca-logo{ height: 38px; width: auto; }
       .nav-escritorio{ display:none; gap: 4px; }
       .nav-link{ background:none; border:none; color: var(--beige); font-size: 14px; padding: 8px 10px; border-radius: var(--radio); }
       .nav-link:hover{ color: var(--oro-suave); }
