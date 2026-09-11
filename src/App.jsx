@@ -8,21 +8,21 @@ import {
 
 /* =========================================================================
    TIENDA CRIOLLA — Productos para el Caballo Criollo Colombiano
-   -------------------------------------------------------------------------
-   Guía rápida para Esteban:
-   - Todo el "contenido" de la tienda (productos, combos, datos de contacto,
-     número de WhatsApp) vive en objetos de JavaScript más abajo (sección
-     DATOS POR DEFECTO) y se guarda con window.storage. Así el código NUNCA
-     tiene que tocarse para agregar un producto: se hace desde el Panel
-     Admin (candado en la esquina superior derecha).
-   - window.storage es una base de datos simple llave→valor que persiste
-     entre visitas. Se usa "shared: true" para productos/combos/config
-     (para que TODOS los visitantes vean lo mismo) y "shared: false" para
-     el carrito de cada persona (privado).
-   - No hay backend real todavía. La contraseña del panel admin es solo un
-     candado básico para no mostrar los botones de edición a cualquiera;
-     cuando conectes una base de datos de verdad, reemplaza ADMIN LOGIN por
-     autenticación real.
+  -------------------------------------------------------------------------
+  Guía rápida para Esteban:
+  - Todo el "contenido" de la tienda (productos, combos, datos de contacto,
+    número de WhatsApp) vive en objetos de JavaScript más abajo (sección
+    DATOS POR DEFECTO) y se guarda con window.storage. Así el código NUNCA
+    tiene que tocarse para agregar un producto: se hace desde el Panel
+    Admin (candado en la esquina superior derecha).
+  - window.storage es una base de datos simple llave→valor que persiste
+    entre visitas. Se usa "shared: true" para productos/combos/config
+    (para que TODOS los visitantes vean lo mismo) y "shared: false" para
+    el carrito de cada persona (privado).
+  - No hay backend real todavía. La contraseña del panel admin es solo un
+    candado básico para no mostrar los botones de edición a cualquiera;
+    cuando conectes una base de datos de verdad, reemplaza ADMIN LOGIN por
+    autenticación real.
    ========================================================================= */
 
 /* ---------------------------- Utilidades ---------------------------- */
@@ -439,7 +439,7 @@ function Encabezado({ config, categorias, vista, irA, menuAbierto, setMenuAbiert
     <header className="encabezado">
       <div className="encabezado-fila">
         <button className="marca" onClick={() => irA("inicio")}>
-          <Herradura size={30} />
+          <img src={marcaLogo} alt="Finca Criolla" className="marca-logo" />
           <span className="marca-texto">
             <strong>{config.nombreTienda}</strong>
             <em>Caballo Criollo Colombiano</em>
