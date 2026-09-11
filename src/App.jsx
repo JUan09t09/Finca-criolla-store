@@ -123,15 +123,21 @@ function Herradura({ size = 22, color = "var(--oro)", style }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" style={style}>
       <path
-        d="M27 92 L33 48 C33 25 42 10 50 10 C58 10 67 25 67 48 L73 92"
-        stroke={color}
-        strokeWidth="9"
-        strokeLinecap="round"
+        d="M50 8
+          C74 8 88 28 88 52
+          C88 68 80 80 68 88
+          L68 62
+          C68 48 60 40 50 40
+          C40 40 32 48 32 62
+          L32 88
+          C20 80 12 68 12 52
+          C12 28 26 8 50 8 Z"
+        fill={color}
       />
-      <circle cx="30" cy="60" r="3.2" fill={color} />
-      <circle cx="28" cy="76" r="3.2" fill={color} />
-      <circle cx="70" cy="60" r="3.2" fill={color} />
-      <circle cx="72" cy="76" r="3.2" fill={color} />
+      <circle cx="30" cy="70" r="4" fill="var(--negro)" />
+      <circle cx="30" cy="84" r="4" fill="var(--negro)" />
+      <circle cx="70" cy="70" r="4" fill="var(--negro)" />
+      <circle cx="70" cy="84" r="4" fill="var(--negro)" />
     </svg>
   );
 }
