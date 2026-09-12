@@ -330,13 +330,16 @@ export default function App() {
     () => itemsCarrito.reduce((sum, i) => sum + i.precio * i.cantidad, 0),
     [itemsCarrito]
   );
+  // El badge cuenta solo ítems válidos (que sí existen entre productos/combos),
+  // igual que el carrito visible. Así no aparece un "1" por un ítem huérfano
+  // guardado en localStorage que ya no corresponde a ningún producto/combo.
   const cantidadCarrito = useMemo(
-    () => carrito.reduce((sum, i) => sum + i.cantidad, 0),
-    [carrito]
+    () => itemsCarrito.reduce((sum, i) => sum + i.cantidad, 0),
+    [itemsCarrito]
   );
 
   const linkWhatsApp = (items, total, mensajeExtra = "") => {
-    let texto = "Hola, estoy interesado en realizar una compra.\n\nProductos:\n";
+    let texto = "Hola, estoy interesado en realizar una compra. Mi nombre es: \n\nProductos:\n";
     items.forEach((i) => {
       texto += `- ${i.nombre} x${i.cantidad}\n`;
     });
