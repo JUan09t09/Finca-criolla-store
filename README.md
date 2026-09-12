@@ -91,4 +91,3 @@ cuestión de reemplazar las funciones `storageGet` / `storageSet` en
 Puedes hacerlo desde el panel admin de la tienda una vez publicada
 (Configuración), o directamente en el código, en el objeto
 `DEFAULT_CONFIG` dentro de `src/App.jsx`.
-# Finca-criolla-store

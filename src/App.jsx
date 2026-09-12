@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { supabase } from "./supabaseClient";
 import {
   ShoppingCart, Menu, X, Plus, Minus, Trash2, MessageCircle, ChevronRight,
   ChevronLeft, Lock, Star, MapPin, Phone, Mail, Clock, Instagram, Facebook,
@@ -8,21 +9,21 @@ import {
 
 /* =========================================================================
    TIENDA CRIOLLA — Productos para el Caballo Criollo Colombiano
-  -------------------------------------------------------------------------
-  Guía rápida para Esteban:
-  - Todo el "contenido" de la tienda (productos, combos, datos de contacto,
-    número de WhatsApp) vive en objetos de JavaScript más abajo (sección
-    DATOS POR DEFECTO) y se guarda con window.storage. Así el código NUNCA
-    tiene que tocarse para agregar un producto: se hace desde el Panel
-    Admin (candado en la esquina superior derecha).
-  - window.storage es una base de datos simple llave→valor que persiste
-    entre visitas. Se usa "shared: true" para productos/combos/config
-    (para que TODOS los visitantes vean lo mismo) y "shared: false" para
-    el carrito de cada persona (privado).
-  - No hay backend real todavía. La contraseña del panel admin es solo un
-    candado básico para no mostrar los botones de edición a cualquiera;
-    cuando conectes una base de datos de verdad, reemplaza ADMIN LOGIN por
-    autenticación real.
+   -------------------------------------------------------------------------
+   Guía rápida para Esteban:
+   - Todo el "contenido" de la tienda (productos, combos, datos de contacto,
+     número de WhatsApp) vive en objetos de JavaScript más abajo (sección
+     DATOS POR DEFECTO) y se guarda con window.storage. Así el código NUNCA
+     tiene que tocarse para agregar un producto: se hace desde el Panel
+     Admin (candado en la esquina superior derecha).
+   - window.storage es una base de datos simple llave→valor que persiste
+     entre visitas. Se usa "shared: true" para productos/combos/config
+     (para que TODOS los visitantes vean lo mismo) y "shared: false" para
+     el carrito de cada persona (privado).
+   - No hay backend real todavía. La contraseña del panel admin es solo un
+     candado básico para no mostrar los botones de edición a cualquiera;
+     cuando conectes una base de datos de verdad, reemplaza ADMIN LOGIN por
+     autenticación real.
    ========================================================================= */
 
 /* ---------------------------- Utilidades ---------------------------- */
@@ -33,17 +34,39 @@ const formatCOP = (n) =>
   "$" + Math.round(Number(n) || 0).toLocaleString("es-CO") ;
 
 // NOTA PARA ESTEBAN:
-// En el artefacto de Claude estas funciones usaban "window.storage" (una base
-// de datos que Anthropic ofrece SOLO dentro del chat). Fuera de Claude eso no
-// existe, así que aquí las reemplazamos por localStorage: guarda los datos en
-// el navegador de quien los creó. Funciona perfecto para probar y hasta para
-// una tienda pequeña, PERO OJO: si editas productos desde tu celular, esos
-// cambios NO se verán en el computador de un cliente — cada navegador tiene
-// su propio localStorage. Cuando quieras que los cambios del panel admin se
-// vean para TODOS los visitantes, el siguiente paso es conectar una base de
-// datos real (Supabase es una opción gratuita y sencilla). El README explica
-// esto con más detalle.
-async function storageGet(key) {
+// Hay dos tipos de datos en la tienda:
+// 1) Config, productos y combos: deben verse IGUAL para todo el mundo, así
+//    que se guardan en la nube (Supabase, una base de datos real y gratis).
+//    Todo queda en una sola tabla "tienda_datos" con dos columnas: "clave"
+//    (config/productos/combos) y "valor" (el contenido en formato JSON).
+// 2) El carrito de cada visitante: es privado de cada persona, así que sigue
+//    guardándose en localStorage (el navegador de cada quien), no tiene
+//    sentido que viva en la nube.
+
+async function nubeGet(clave) {
+  try {
+    const { data, error } = await supabase
+      .from("tienda_datos")
+      .select("valor")
+      .eq("clave", clave)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.valor;
+  } catch (e) {
+    console.error("No se pudo leer", clave, e);
+    return null;
+  }
+}
+async function nubeSet(clave, valor) {
+  try {
+    const { error } = await supabase.from("tienda_datos").upsert({ clave, valor });
+    if (error) console.error("No se pudo guardar", clave, error);
+  } catch (e) {
+    console.error("No se pudo guardar", clave, e);
+  }
+}
+
+function localGet(key) {
   try {
     const raw = window.localStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
@@ -51,7 +74,7 @@ async function storageGet(key) {
     return null;
   }
 }
-async function storageSet(key, value) {
+function localSet(key, value) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
@@ -123,21 +146,15 @@ function Herradura({ size = 22, color = "var(--oro)", style }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" style={style}>
       <path
-        d="M50 8
-          C74 8 88 28 88 52
-          C88 68 80 80 68 88
-          L68 62
-          C68 48 60 40 50 40
-          C40 40 32 48 32 62
-          L32 88
-          C20 80 12 68 12 52
-          C12 28 26 8 50 8 Z"
-        fill={color}
+        d="M27 92 L33 48 C33 25 42 10 50 10 C58 10 67 25 67 48 L73 92"
+        stroke={color}
+        strokeWidth="9"
+        strokeLinecap="round"
       />
-      <circle cx="30" cy="70" r="4" fill="var(--negro)" />
-      <circle cx="30" cy="84" r="4" fill="var(--negro)" />
-      <circle cx="70" cy="70" r="4" fill="var(--negro)" />
-      <circle cx="70" cy="84" r="4" fill="var(--negro)" />
+      <circle cx="30" cy="60" r="3.2" fill={color} />
+      <circle cx="28" cy="76" r="3.2" fill={color} />
+      <circle cx="70" cy="60" r="3.2" fill={color} />
+      <circle cx="72" cy="76" r="3.2" fill={color} />
     </svg>
   );
 }
@@ -195,15 +212,15 @@ export default function App() {
   // Cargar datos guardados (o crear los valores por defecto la primera vez)
   useEffect(() => {
     (async () => {
-      const [c, p, cb, cart] = await Promise.all([
-        storageGet("store-config"),
-        storageGet("store-products"),
-        storageGet("store-combos"),
-        storageGet("store-cart"),
+      const [c, p, cb] = await Promise.all([
+        nubeGet("store-config"),
+        nubeGet("store-products"),
+        nubeGet("store-combos"),
       ]);
-      if (c) setConfig(c); else await storageSet("store-config", DEFAULT_CONFIG);
-      if (p) setProductos(p); else await storageSet("store-products", DEFAULT_PRODUCTS);
-      if (cb) setCombos(cb); else await storageSet("store-combos", DEFAULT_COMBOS);
+      if (c) setConfig(c); else await nubeSet("store-config", DEFAULT_CONFIG);
+      if (p) setProductos(p); else await nubeSet("store-products", DEFAULT_PRODUCTS);
+      if (cb) setCombos(cb); else await nubeSet("store-combos", DEFAULT_COMBOS);
+      const cart = localGet("store-cart");
       if (cart) setCarrito(cart);
       setCargando(false);
     })();
@@ -230,19 +247,19 @@ export default function App() {
 
   const guardarProductos = async (nuevos) => {
     setProductos(nuevos);
-    await storageSet("store-products", nuevos);
+    await nubeSet("store-products", nuevos);
   };
   const guardarCombos = async (nuevos) => {
     setCombos(nuevos);
-    await storageSet("store-combos", nuevos);
+    await nubeSet("store-combos", nuevos);
   };
   const guardarConfig = async (nuevo) => {
     setConfig(nuevo);
-    await storageSet("store-config", nuevo);
+    await nubeSet("store-config", nuevo);
   };
   const guardarCarrito = async (nuevo) => {
     setCarrito(nuevo);
-    await storageSet("store-cart", nuevo);
+    localSet("store-cart", nuevo);
   };
 
   const mostrarAviso = (msg) => {
