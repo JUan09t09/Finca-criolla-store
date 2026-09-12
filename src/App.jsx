@@ -125,7 +125,7 @@ const DEFAULT_CONFIG = {
 const DEFAULT_CATEGORIES = [
   { id: "alimentacion", nombre: "Alimentación", icono: "Wheat" },
   { id: "accesorios", nombre: "Accesorios", icono: "Link2" },
-  { id: "monturas", nombre: "Monturas y Aperos", icono: "Package" },
+  { id: "monturas", nombre: "Monturas", icono: "Package" },
   { id: "ropa", nombre: "Ropa para Montar", icono: "Shirt" },
   { id: "cuidado", nombre: "Cuidado y Aseo", icono: "Droplet" },
   { id: "otros", nombre: "Otros Productos", icono: "Package" },
@@ -555,10 +555,10 @@ function VistaInicio({ config, categorias, combos, irA, agregarAlCarrito, compra
         }
       >
         <div className="hero-contenido">
-          <span className="hero-eyebrow"><Herradura size={16} /> Desde la sabana hasta tu finca</span>
+          <span className="hero-eyebrow"><Herradura size={16} /> Desde las montañas hasta la raspa</span>
           <h1>{config.eslogan}</h1>
           <p className="hero-sub">
-            Alimento, aperos, monturas, ropa de jinete y cuidado, elegidos por caballistas
+            Alimento, aperos, monturas, ropa para montar caballo y cuidado, elegidos por caballistas
             para el Caballo de Paso Fino Colombiano.
           </p>
           <div className="hero-botones">
