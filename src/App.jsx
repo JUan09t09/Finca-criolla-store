@@ -4,7 +4,7 @@ import {
   ShoppingCart, Menu, X, Plus, Minus, Trash2, MessageCircle, ChevronRight,
   ChevronLeft, Lock, Star, MapPin, Phone, Mail, Clock, Instagram, Facebook,
   Wheat, Shirt, Droplet, Package, Link2, Check, Edit2, Save, LogOut, PlusCircle,
-  ImageOff, AlertCircle
+  ImageOff, AlertCircle, Upload, Loader2, ZoomIn, ImagePlus
 } from "lucide-react";
 
 /* =========================================================================
@@ -82,6 +82,27 @@ function localSet(key, value) {
   }
 }
 
+// Sube una foto real (tomada del computador/celular) al bucket "imagenes" de
+// Supabase Storage y devuelve el enlace público para guardarlo en el
+// producto, combo o configuración. "carpeta" es solo para organizar
+// (ej: "productos", "combos", "marca").
+async function subirImagen(archivo, carpeta) {
+  try {
+    const nombreLimpio = archivo.name.replace(/[^a-zA-Z0-9.\-_]/g, "-");
+    const ruta = `${carpeta}/${Date.now()}-${nombreLimpio}`;
+    const { error } = await supabase.storage.from("imagenes").upload(ruta, archivo);
+    if (error) {
+      console.error("No se pudo subir la imagen", error);
+      return null;
+    }
+    const { data } = supabase.storage.from("imagenes").getPublicUrl(ruta);
+    return data.publicUrl;
+  } catch (e) {
+    console.error("No se pudo subir la imagen", e);
+    return null;
+  }
+}
+
 /* ---------------------------- Datos por defecto ---------------------------- */
 
 const DEFAULT_CONFIG = {
@@ -95,6 +116,8 @@ const DEFAULT_CONFIG = {
   instagram: "@fincacriolla",
   facebook: "Finca Criolla",
   adminPassword: "criollo2026",
+  logoImagen: "",
+  bannerImagen: "",
   nosotrosTexto:
     "Somos una familia de caballistas antes que una tienda. Durante más de una década hemos criado, entrenado y presentado Caballos de Paso Fino Colombiano, y cada producto que vendemos es el mismo que usamos en nuestra propia finca. No creemos en el catálogo genérico de mascotas: creemos en el apero bien hecho, el concentrado que sí rinde y el trato que un animal de trabajo y de exhibición se merece. Trabajamos con talabarteros, veterinarios y criadores colombianos para ofrecerte productos probados en el llano, la sabana y la pista.",
 };
@@ -111,21 +134,21 @@ const DEFAULT_CATEGORIES = [
 const ICONS = { Wheat, Link2, Package, Shirt, Droplet };
 
 const DEFAULT_PRODUCTS = [
-  { id: uid(), nombre: "Concentrado Premium 40kg", categoria: "alimentacion", precio: 145000, descripcion: "Fórmula balanceada para caballos de trabajo y exhibición, alta en fibra y proteína.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Suplemento Mineral en Bloque", categoria: "alimentacion", precio: 38000, descripcion: "Bloque de sales minerales para completar la dieta diaria.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Vitaminas para Casco y Pelaje", categoria: "alimentacion", precio: 62000, descripcion: "Biotina y omega-3 para fortalecer casco, crin y cola.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Cabestro de Cuero Trenzado", categoria: "accesorios", precio: 95000, descripcion: "Cuero colombiano trenzado a mano, hebillas de bronce.", disponible: true, imagen: "", variantes: "Talla: Potro, Caballo" },
-  { id: uid(), nombre: "Riendas de Cuero con Costura Doble", categoria: "accesorios", precio: 78000, descripcion: "Resistentes y flexibles, ideales para paso fino.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Cincha Acolchada", categoria: "accesorios", precio: 54000, descripcion: "Acolchado transpirable, evita rozaduras.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Montura Colombiana Clásica", categoria: "monturas", precio: 890000, descripcion: "Montura en cuero grabado a mano, estilo llanero tradicional.", disponible: true, imagen: "", variantes: "Color: Café, Negro" },
-  { id: uid(), nombre: "Mantilla de Lana", categoria: "monturas", precio: 65000, descripcion: "Absorbe el sudor y protege el lomo del caballo.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Ruana de Jinete", categoria: "ropa", precio: 175000, descripcion: "Ruana tradicional en lana virgen, ideal para trote matinal.", disponible: true, imagen: "", variantes: "Talla: S, M, L, XL" },
-  { id: uid(), nombre: "Botas de Montar en Cuero", categoria: "ropa", precio: 220000, descripcion: "Bota alta clásica, suela antideslizante.", disponible: true, imagen: "", variantes: "Talla: 38-44" },
-  { id: uid(), nombre: "Sombrero Aguadeño", categoria: "ropa", precio: 98000, descripcion: "Sombrero tradicional tejido a mano.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Shampoo Brillo y Cuerpo", categoria: "cuidado", precio: 34000, descripcion: "Limpia y da brillo sin resecar la piel.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Cepillo de Cerdas Naturales", categoria: "cuidado", precio: 22000, descripcion: "Ideal para el cepillado diario y la circulación de la piel.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Aceite para Casco", categoria: "cuidado", precio: 29000, descripcion: "Previene el resecamiento y las grietas del casco.", disponible: true, imagen: "", variantes: "" },
-  { id: uid(), nombre: "Botiquín Básico Ecuestre", categoria: "otros", precio: 85000, descripcion: "Elementos esenciales de primeros auxilios para el caballo.", disponible: true, imagen: "", variantes: "" },
+  { id: uid(), nombre: "Concentrado Premium 40kg", categoria: "alimentacion", precio: 145000, descripcion: "Fórmula balanceada para caballos de trabajo y exhibición, alta en fibra y proteína.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Suplemento Mineral en Bloque", categoria: "alimentacion", precio: 38000, descripcion: "Bloque de sales minerales para completar la dieta diaria.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Vitaminas para Casco y Pelaje", categoria: "alimentacion", precio: 62000, descripcion: "Biotina y omega-3 para fortalecer casco, crin y cola.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Cabestro de Cuero Trenzado", categoria: "accesorios", precio: 95000, descripcion: "Cuero colombiano trenzado a mano, hebillas de bronce.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "Talla: Potro, Caballo" },
+  { id: uid(), nombre: "Riendas de Cuero con Costura Doble", categoria: "accesorios", precio: 78000, descripcion: "Resistentes y flexibles, ideales para paso fino.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Cincha Acolchada", categoria: "accesorios", precio: 54000, descripcion: "Acolchado transpirable, evita rozaduras.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Montura Colombiana Clásica", categoria: "monturas", precio: 890000, descripcion: "Montura en cuero grabado a mano, estilo llanero tradicional.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "Color: Café, Negro" },
+  { id: uid(), nombre: "Mantilla de Lana", categoria: "monturas", precio: 65000, descripcion: "Absorbe el sudor y protege el lomo del caballo.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Ruana de Jinete", categoria: "ropa", precio: 175000, descripcion: "Ruana tradicional en lana virgen, ideal para trote matinal.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "Talla: S, M, L, XL" },
+  { id: uid(), nombre: "Botas de Montar en Cuero", categoria: "ropa", precio: 220000, descripcion: "Bota alta clásica, suela antideslizante.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "Talla: 38-44" },
+  { id: uid(), nombre: "Sombrero Aguadeño", categoria: "ropa", precio: 98000, descripcion: "Sombrero tradicional tejido a mano.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Shampoo Brillo y Cuerpo", categoria: "cuidado", precio: 34000, descripcion: "Limpia y da brillo sin resecar la piel.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Cepillo de Cerdas Naturales", categoria: "cuidado", precio: 22000, descripcion: "Ideal para el cepillado diario y la circulación de la piel.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Aceite para Casco", categoria: "cuidado", precio: 29000, descripcion: "Previene el resecamiento y las grietas del casco.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
+  { id: uid(), nombre: "Botiquín Básico Ecuestre", categoria: "otros", precio: 85000, descripcion: "Elementos esenciales de primeros auxilios para el caballo.", disponible: true, imagenes: [], descripcionLarga: "", variantes: "" },
 ];
 
 const DEFAULT_COMBOS = [
@@ -386,6 +409,17 @@ export default function App() {
             productos={productos.filter((p) => p.categoria === vistaParam && p.disponible)}
             agregarAlCarrito={agregarAlCarrito}
             comprarUnPorWhatsApp={comprarUnPorWhatsApp}
+            irA={irA}
+          />
+        )}
+
+        {vista === "producto" && (
+          <VistaProductoDetalle
+            producto={productos.find((p) => p.id === vistaParam)}
+            categoria={categorias.find((c) => c.id === (productos.find((p) => p.id === vistaParam) || {}).categoria)}
+            irA={irA}
+            agregarAlCarrito={agregarAlCarrito}
+            comprarUnPorWhatsApp={comprarUnPorWhatsApp}
           />
         )}
 
@@ -456,7 +490,11 @@ function Encabezado({ config, categorias, vista, irA, menuAbierto, setMenuAbiert
     <header className="encabezado">
       <div className="encabezado-fila">
         <button className="marca" onClick={() => irA("inicio")}>
-          <Herradura size={30} />
+          {config.logoImagen ? (
+            <img src={config.logoImagen} alt={config.nombreTienda} className="marca-logo-img" />
+          ) : (
+            <Herradura size={30} />
+          )}
           <span className="marca-texto">
             <strong>{config.nombreTienda}</strong>
             <em>Caballo Criollo Colombiano</em>
@@ -504,7 +542,18 @@ function Encabezado({ config, categorias, vista, irA, menuAbierto, setMenuAbiert
 function VistaInicio({ config, categorias, combos, irA, agregarAlCarrito, comprarUnPorWhatsApp }) {
   return (
     <>
-      <section className="hero">
+      <section
+        className="hero"
+        style={
+          config.bannerImagen
+            ? {
+                backgroundImage: `linear-gradient(rgba(23,19,15,0.55), rgba(23,19,15,0.75)), url(${config.bannerImagen})`,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }
+            : undefined
+        }
+      >
         <div className="hero-contenido">
           <span className="hero-eyebrow"><Herradura size={16} /> Desde la sabana hasta tu finca</span>
           <h1>{config.eslogan}</h1>
@@ -628,14 +677,14 @@ function TarjetaCombo({ combo, agregarAlCarrito, comprarUnPorWhatsApp }) {
 
 /* ---------------------------- Vista: Categoría ---------------------------- */
 
-function VistaCategoria({ categoria, productos, agregarAlCarrito, comprarUnPorWhatsApp }) {
+function VistaCategoria({ categoria, productos, agregarAlCarrito, comprarUnPorWhatsApp, irA }) {
   if (!categoria) return <VacioAviso texto="Categoría no encontrada." />;
   return (
     <section className="seccion">
       <SeccionTitulo eyebrow="Categoría" titulo={categoria.nombre} />
       <div className="grid-productos">
         {productos.map((p) => (
-          <TarjetaProducto key={p.id} producto={p} agregarAlCarrito={agregarAlCarrito} comprarUnPorWhatsApp={comprarUnPorWhatsApp} />
+          <TarjetaProducto key={p.id} producto={p} agregarAlCarrito={agregarAlCarrito} comprarUnPorWhatsApp={comprarUnPorWhatsApp} irA={irA} />
         ))}
       </div>
       {productos.length === 0 && <VacioAviso texto="Aún no hay productos disponibles en esta categoría." />}
@@ -643,12 +692,18 @@ function VistaCategoria({ categoria, productos, agregarAlCarrito, comprarUnPorWh
   );
 }
 
-function TarjetaProducto({ producto, agregarAlCarrito, comprarUnPorWhatsApp }) {
+function TarjetaProducto({ producto, agregarAlCarrito, comprarUnPorWhatsApp, irA }) {
+  const foto = (producto.imagenes && producto.imagenes[0]) || producto.imagen || "";
   return (
     <article className="tarjeta-producto">
-      <FotoProducto src={producto.imagen} alt={producto.nombre} className="tarjeta-producto-foto" />
+      <button className="tarjeta-producto-foto-boton" onClick={() => irA("producto", producto.id)}>
+        <FotoProducto src={foto} alt={producto.nombre} className="tarjeta-producto-foto" />
+        {producto.imagenes && producto.imagenes.length > 1 && (
+          <span className="etiqueta-galeria"><ImagePlus size={12} /> {producto.imagenes.length}</span>
+        )}
+      </button>
       <div className="tarjeta-producto-cuerpo">
-        <h4>{producto.nombre}</h4>
+        <h4 className="tarjeta-producto-titulo" onClick={() => irA("producto", producto.id)}>{producto.nombre}</h4>
         <p className="tarjeta-descripcion">{producto.descripcion}</p>
         {producto.variantes && <p className="tarjeta-variantes">{producto.variantes}</p>}
         <div className="tarjeta-precios">
@@ -662,8 +717,105 @@ function TarjetaProducto({ producto, agregarAlCarrito, comprarUnPorWhatsApp }) {
             <MessageCircle size={15} /> WhatsApp
           </button>
         </div>
+        <button className="enlace-detalle" onClick={() => irA("producto", producto.id)}>
+          Ver detalles y más fotos <ChevronRight size={13} />
+        </button>
       </div>
     </article>
+  );
+}
+
+/* ---------------------------- Vista: Detalle de producto (subpágina) ---------------------------- */
+
+function VistaProductoDetalle({ producto, categoria, irA, agregarAlCarrito, comprarUnPorWhatsApp }) {
+  const [indiceActivo, setIndiceActivo] = useState(0);
+  const [zoomAbierto, setZoomAbierto] = useState(false);
+
+  if (!producto) {
+    return (
+      <section className="seccion seccion-angosta">
+        <VacioAviso texto="Ese producto ya no está disponible." />
+        <div className="centrado" style={{ marginTop: 20 }}>
+          <button className="boton boton-linea" onClick={() => irA("inicio")}>Volver al inicio</button>
+        </div>
+      </section>
+    );
+  }
+
+  const fotos = producto.imagenes && producto.imagenes.length > 0 ? producto.imagenes : [producto.imagen].filter(Boolean);
+  const fotoActiva = fotos[indiceActivo] || "";
+
+  return (
+    <section className="seccion seccion-detalle">
+      <button className="miga-de-pan" onClick={() => (categoria ? irA("categoria", categoria.id) : irA("inicio"))}>
+        <ChevronLeft size={15} /> {categoria ? categoria.nombre : "Volver"}
+      </button>
+
+      <div className="detalle-grid">
+        <div className="detalle-galeria">
+          <button className="detalle-foto-principal" onClick={() => fotoActiva && setZoomAbierto(true)}>
+            <FotoProducto src={fotoActiva} alt={producto.nombre} className="detalle-foto-principal-img" />
+            {fotoActiva && (
+              <span className="detalle-zoom-hint"><ZoomIn size={15} /> Clic para hacer zoom</span>
+            )}
+          </button>
+          {fotos.length > 1 && (
+            <div className="detalle-miniaturas">
+              {fotos.map((f, i) => (
+                <button
+                  key={i}
+                  className={`detalle-miniatura ${i === indiceActivo ? "activa" : ""}`}
+                  onClick={() => setIndiceActivo(i)}
+                >
+                  <FotoProducto src={f} alt={`${producto.nombre} ${i + 1}`} className="detalle-miniatura-img" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="detalle-info">
+          {categoria && <MarcaTag>{categoria.nombre}</MarcaTag>}
+          <h1 className="detalle-titulo">{producto.nombre}</h1>
+          {producto.variantes && <p className="tarjeta-variantes">{producto.variantes}</p>}
+          <div className="tarjeta-precios" style={{ margin: "14px 0" }}>
+            <span className="precio precio-grande">{formatCOP(producto.precio)}</span>
+          </div>
+          <p className="detalle-descripcion">{producto.descripcionLarga || producto.descripcion}</p>
+          <div className="tarjeta-botones" style={{ marginTop: 20 }}>
+            <button className="boton boton-oro" onClick={() => agregarAlCarrito("producto", producto.id, producto.nombre)}>
+              <ShoppingCart size={16} /> Agregar al carrito
+            </button>
+            <button className="boton boton-whatsapp" onClick={() => comprarUnPorWhatsApp(producto)}>
+              <MessageCircle size={16} /> Comprar por WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {zoomAbierto && fotoActiva && (
+        <div className="zoom-overlay" onClick={() => setZoomAbierto(false)}>
+          <button className="zoom-cerrar" onClick={() => setZoomAbierto(false)}><X size={26} /></button>
+          {fotos.length > 1 && (
+            <>
+              <button
+                className="zoom-flecha zoom-flecha-izq"
+                onClick={(e) => { e.stopPropagation(); setIndiceActivo((indiceActivo - 1 + fotos.length) % fotos.length); }}
+              >
+                <ChevronLeft size={30} />
+              </button>
+              <button
+                className="zoom-flecha zoom-flecha-der"
+                onClick={(e) => { e.stopPropagation(); setIndiceActivo((indiceActivo + 1) % fotos.length); }}
+              >
+                <ChevronRight size={30} />
+              </button>
+            </>
+          )}
+          <img src={fotoActiva} alt={producto.nombre} className="zoom-imagen" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -730,7 +882,7 @@ function CarritoLateral({ items, total, onCerrar, cambiarCantidad, quitarDelCarr
           {items.length === 0 && <VacioAviso texto="Tu carrito está vacío por ahora." />}
           {items.map((item) => (
             <div className="carrito-item" key={item.tipo + item.id}>
-              <FotoProducto src={item.imagen} alt={item.nombre} className="carrito-item-foto" />
+              <FotoProducto src={(item.imagenes && item.imagenes[0]) || item.imagen} alt={item.nombre} className="carrito-item-foto" />
               <div className="carrito-item-info">
                 <strong>{item.nombre}</strong>
                 <span className="precio-chico">{formatCOP(item.precio)}</span>
@@ -865,7 +1017,7 @@ function VistaAdmin({ autenticado, setAutenticado, config, guardarConfig, catego
 }
 
 function vacioProducto(categoriaDefault) {
-  return { id: null, nombre: "", categoria: categoriaDefault || "alimentacion", precio: "", descripcion: "", disponible: true, imagen: "", variantes: "" };
+  return { id: null, nombre: "", categoria: categoriaDefault || "alimentacion", precio: "", descripcion: "", descripcionLarga: "", disponible: true, imagenes: [], variantes: "" };
 }
 
 function AdminProductos({ categorias, productos, guardarProductos }) {
@@ -902,7 +1054,7 @@ function AdminProductos({ categorias, productos, guardarProductos }) {
       <div className="admin-tabla">
         {productos.map((p) => (
           <div key={p.id} className="admin-fila">
-            <FotoProducto src={p.imagen} alt={p.nombre} className="admin-fila-foto" />
+            <FotoProducto src={(p.imagenes && p.imagenes[0]) || p.imagen} alt={p.nombre} className="admin-fila-foto" />
             <div className="admin-fila-info">
               <strong>{p.nombre}</strong>
               <span>{categorias.find((c) => c.id === p.categoria)?.nombre || p.categoria} · {formatCOP(p.precio)}</span>
@@ -922,8 +1074,27 @@ function AdminProductos({ categorias, productos, guardarProductos }) {
 }
 
 function FormularioProducto({ categorias, producto, onGuardar, onCancelar }) {
-  const [f, setF] = useState(producto);
+  const [f, setF] = useState({ ...producto, imagenes: producto.imagenes || (producto.imagen ? [producto.imagen] : []) });
+  const [subiendo, setSubiendo] = useState(false);
   const cambiar = (campo, valor) => setF({ ...f, [campo]: valor });
+
+  const elegirFotos = async (e) => {
+    const archivos = Array.from(e.target.files || []);
+    if (archivos.length === 0) return;
+    setSubiendo(true);
+    const urls = [];
+    for (const archivo of archivos) {
+      const url = await subirImagen(archivo, "productos");
+      if (url) urls.push(url);
+    }
+    setF((prev) => ({ ...prev, imagenes: [...prev.imagenes, ...urls] }));
+    setSubiendo(false);
+    e.target.value = "";
+  };
+
+  const quitarFoto = (i) => {
+    setF((prev) => ({ ...prev, imagenes: prev.imagenes.filter((_, idx) => idx !== i) }));
+  };
 
   return (
     <form
@@ -940,12 +1111,34 @@ function FormularioProducto({ categorias, producto, onGuardar, onCancelar }) {
         </select>
       </label>
       <label>Precio (COP)<input type="number" value={f.precio} onChange={(e) => cambiar("precio", e.target.value)} required /></label>
-      <label>Descripción<textarea value={f.descripcion} onChange={(e) => cambiar("descripcion", e.target.value)} /></label>
+      <label>Descripción corta (para la tarjeta del producto)<textarea value={f.descripcion} onChange={(e) => cambiar("descripcion", e.target.value)} /></label>
+      <label>Descripción detallada (se muestra en la página del producto)<textarea rows={5} value={f.descripcionLarga} onChange={(e) => cambiar("descripcionLarga", e.target.value)} placeholder="Cuenta más: materiales, usos, cuidados, tallas disponibles…" /></label>
       <label>Variantes (opcional, ej: Talla: S, M, L)<input value={f.variantes} onChange={(e) => cambiar("variantes", e.target.value)} /></label>
-      <label>URL de la foto (opcional)<input value={f.imagen} onChange={(e) => cambiar("imagen", e.target.value)} placeholder="https://…" /></label>
+
+      <label>
+        Fotos del producto
+        <div className="subir-fotos">
+          <label className="boton-subir">
+            {subiendo ? <Loader2 size={16} className="girando" /> : <Upload size={16} />}
+            {subiendo ? "Subiendo…" : "Subir fotos desde tu computador o celular"}
+            <input type="file" accept="image/*" multiple onChange={elegirFotos} disabled={subiendo} hidden />
+          </label>
+          {f.imagenes.length > 0 && (
+            <div className="miniaturas-admin">
+              {f.imagenes.map((url, i) => (
+                <div className="miniatura-admin" key={i}>
+                  <img src={url} alt={`Foto ${i + 1}`} />
+                  <button type="button" onClick={() => quitarFoto(i)}><X size={13} /></button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </label>
+
       <label className="fila-check"><input type="checkbox" checked={f.disponible} onChange={(e) => cambiar("disponible", e.target.checked)} /> Disponible en la tienda</label>
       <div className="form-botones">
-        <button type="submit" className="boton boton-oro"><Save size={16} /> Guardar</button>
+        <button type="submit" className="boton boton-oro" disabled={subiendo}><Save size={16} /> Guardar</button>
         <button type="button" className="boton boton-linea" onClick={onCancelar}>Cancelar</button>
       </div>
     </form>
@@ -955,6 +1148,7 @@ function FormularioProducto({ categorias, producto, onGuardar, onCancelar }) {
 function vacioCombo() {
   return { id: null, nombre: "", descripcion: "", precio: "", precioOriginal: "", descuento: 0, productos: "", imagen: "", activo: true };
 }
+
 
 function AdminCombos({ combos, guardarCombos }) {
   const [editando, setEditando] = useState(null);
@@ -1007,7 +1201,18 @@ function AdminCombos({ combos, guardarCombos }) {
 
 function FormularioCombo({ combo, onGuardar, onCancelar }) {
   const [f, setF] = useState(combo);
+  const [subiendo, setSubiendo] = useState(false);
   const cambiar = (campo, valor) => setF({ ...f, [campo]: valor });
+
+  const elegirFoto = async (e) => {
+    const archivo = e.target.files && e.target.files[0];
+    if (!archivo) return;
+    setSubiendo(true);
+    const url = await subirImagen(archivo, "combos");
+    if (url) cambiar("imagen", url);
+    setSubiendo(false);
+    e.target.value = "";
+  };
 
   return (
     <form className="form-admin" onSubmit={(e) => { e.preventDefault(); onGuardar(f); }}>
@@ -1017,10 +1222,27 @@ function FormularioCombo({ combo, onGuardar, onCancelar }) {
       <label>Precio original (opcional, para mostrar el descuento)<input type="number" value={f.precioOriginal} onChange={(e) => cambiar("precioOriginal", e.target.value)} /></label>
       <label>Descuento % (opcional, solo referencia visual)<input type="number" value={f.descuento} onChange={(e) => cambiar("descuento", e.target.value)} /></label>
       <label>Productos incluidos (separados por coma)<input value={f.productos} onChange={(e) => cambiar("productos", e.target.value)} placeholder="Concentrado, Cepillo, Shampoo" /></label>
-      <label>URL de la foto (opcional)<input value={f.imagen} onChange={(e) => cambiar("imagen", e.target.value)} placeholder="https://…" /></label>
+      <label>
+        Foto del combo
+        <div className="subir-fotos">
+          <label className="boton-subir">
+            {subiendo ? <Loader2 size={16} className="girando" /> : <Upload size={16} />}
+            {subiendo ? "Subiendo…" : "Subir foto desde tu computador o celular"}
+            <input type="file" accept="image/*" onChange={elegirFoto} disabled={subiendo} hidden />
+          </label>
+          {f.imagen && (
+            <div className="miniaturas-admin">
+              <div className="miniatura-admin">
+                <img src={f.imagen} alt={f.nombre} />
+                <button type="button" onClick={() => cambiar("imagen", "")}><X size={13} /></button>
+              </div>
+            </div>
+          )}
+        </div>
+      </label>
       <label className="fila-check"><input type="checkbox" checked={f.activo} onChange={(e) => cambiar("activo", e.target.checked)} /> Publicado en la tienda</label>
       <div className="form-botones">
-        <button type="submit" className="boton boton-oro"><Save size={16} /> Guardar</button>
+        <button type="submit" className="boton boton-oro" disabled={subiendo}><Save size={16} /> Guardar</button>
         <button type="button" className="boton boton-linea" onClick={onCancelar}>Cancelar</button>
       </div>
     </form>
@@ -1030,7 +1252,29 @@ function FormularioCombo({ combo, onGuardar, onCancelar }) {
 function AdminConfig({ config, guardarConfig }) {
   const [f, setF] = useState(config);
   const [guardado, setGuardado] = useState(false);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
+  const [subiendoBanner, setSubiendoBanner] = useState(false);
   const cambiar = (campo, valor) => setF({ ...f, [campo]: valor });
+
+  const elegirLogo = async (e) => {
+    const archivo = e.target.files && e.target.files[0];
+    if (!archivo) return;
+    setSubiendoLogo(true);
+    const url = await subirImagen(archivo, "marca");
+    if (url) cambiar("logoImagen", url);
+    setSubiendoLogo(false);
+    e.target.value = "";
+  };
+
+  const elegirBanner = async (e) => {
+    const archivo = e.target.files && e.target.files[0];
+    if (!archivo) return;
+    setSubiendoBanner(true);
+    const url = await subirImagen(archivo, "marca");
+    if (url) cambiar("bannerImagen", url);
+    setSubiendoBanner(false);
+    e.target.value = "";
+  };
 
   return (
     <form
@@ -1044,6 +1288,47 @@ function AdminConfig({ config, guardarConfig }) {
     >
       <label>Nombre de la tienda<input value={f.nombreTienda} onChange={(e) => cambiar("nombreTienda", e.target.value)} /></label>
       <label>Eslogan<input value={f.eslogan} onChange={(e) => cambiar("eslogan", e.target.value)} /></label>
+
+      <label>
+        Logo de la tienda (aparece junto al nombre, arriba)
+        <div className="subir-fotos">
+          <label className="boton-subir">
+            {subiendoLogo ? <Loader2 size={16} className="girando" /> : <Upload size={16} />}
+            {subiendoLogo ? "Subiendo…" : "Subir logo"}
+            <input type="file" accept="image/*" onChange={elegirLogo} disabled={subiendoLogo} hidden />
+          </label>
+          {f.logoImagen && (
+            <div className="miniaturas-admin">
+              <div className="miniatura-admin miniatura-logo">
+                <img src={f.logoImagen} alt="Logo" />
+                <button type="button" onClick={() => cambiar("logoImagen", "")}><X size={13} /></button>
+              </div>
+            </div>
+          )}
+          {!f.logoImagen && <p className="nota-admin" style={{ margin: 0 }}>Sin logo subido todavía: se muestra la herradura dorada por defecto.</p>}
+        </div>
+      </label>
+
+      <label>
+        Imagen del banner principal (fondo grande de la página de inicio)
+        <div className="subir-fotos">
+          <label className="boton-subir">
+            {subiendoBanner ? <Loader2 size={16} className="girando" /> : <Upload size={16} />}
+            {subiendoBanner ? "Subiendo…" : "Subir foto de banner"}
+            <input type="file" accept="image/*" onChange={elegirBanner} disabled={subiendoBanner} hidden />
+          </label>
+          {f.bannerImagen && (
+            <div className="miniaturas-admin">
+              <div className="miniatura-admin miniatura-banner">
+                <img src={f.bannerImagen} alt="Banner" />
+                <button type="button" onClick={() => cambiar("bannerImagen", "")}><X size={13} /></button>
+              </div>
+            </div>
+          )}
+          {!f.bannerImagen && <p className="nota-admin" style={{ margin: 0 }}>Sin banner subido todavía: se muestra el fondo oscuro por defecto.</p>}
+        </div>
+      </label>
+
       <label>
         Número de WhatsApp (solo números, con código de país, ej: 573001234567)
         <input value={f.whatsappNumber} onChange={(e) => cambiar("whatsappNumber", e.target.value)} />
@@ -1272,6 +1557,56 @@ function EstiloGlobal() {
       .texto-error{ color: var(--rojo); font-size: 13px; }
       .texto-exito{ display:flex; align-items:center; gap:6px; color: var(--verde); font-size: 13px; font-weight:600; }
       .nota-admin{ font-size: 12px; color:#8a7e68; font-weight:400; line-height:1.5; margin-top: 6px; }
+
+      /* ---- Logo subido en el encabezado ---- */
+      .marca-logo-img{ height: 34px; width: auto; object-fit: contain; }
+
+      /* ---- Tarjeta de producto: botón de foto + insignia de galería ---- */
+      .tarjeta-producto-foto-boton{ display:block; width:100%; padding:0; border:none; background:none; position:relative; }
+      .etiqueta-galeria{ position:absolute; bottom:8px; right:8px; background: rgba(23,19,15,0.75); color: var(--oro-suave); font-size:11px; padding:3px 8px; border-radius: 2px; display:flex; align-items:center; gap:4px; }
+      .tarjeta-producto-titulo{ cursor:pointer; }
+      .tarjeta-producto-titulo:hover{ color: var(--verde); text-decoration: underline; }
+      .enlace-detalle{ background:none; border:none; color: var(--verde); font-size: 12.5px; font-weight:600; display:flex; align-items:center; gap:4px; padding: 4px 0 0; align-self:flex-start; }
+
+      /* ---- Página de detalle de producto ---- */
+      .seccion-detalle{ max-width: 1100px; }
+      .miga-de-pan{ display:flex; align-items:center; gap:4px; background:none; border:none; color:#5c5040; font-size: 13px; margin-bottom: 24px; }
+      .miga-de-pan:hover{ color: var(--verde); }
+      .detalle-grid{ display:grid; grid-template-columns: 1fr; gap: 32px; }
+      @media (min-width: 860px){ .detalle-grid{ grid-template-columns: 1.1fr 1fr; } }
+      .detalle-foto-principal{ position:relative; width:100%; padding:0; border:none; background:none; border-radius: var(--radio); overflow:hidden; cursor: zoom-in; display:block; }
+      .detalle-foto-principal-img{ width:100%; aspect-ratio: 1/1; object-fit:cover; }
+      .detalle-zoom-hint{ position:absolute; bottom:12px; right:12px; background: rgba(23,19,15,0.75); color: var(--crema); font-size:12px; padding:6px 10px; border-radius: 3px; display:flex; align-items:center; gap:6px; }
+      .detalle-miniaturas{ display:flex; gap:10px; margin-top: 12px; flex-wrap:wrap; }
+      .detalle-miniatura{ width:64px; height:64px; padding:0; border-radius: var(--radio); overflow:hidden; border: 2px solid transparent; background:none; }
+      .detalle-miniatura.activa{ border-color: var(--oro); }
+      .detalle-miniatura-img{ width:100%; height:100%; object-fit:cover; }
+      .detalle-info{ display:flex; flex-direction:column; }
+      .detalle-titulo{ font-size: clamp(24px, 3.4vw, 36px); margin: 10px 0 6px; }
+      .detalle-descripcion{ font-size: 15.5px; color:#4a4030; line-height:1.7; white-space: pre-line; }
+      .precio-grande{ font-size: 26px; }
+
+      /* ---- Zoom / lightbox ---- */
+      .zoom-overlay{ position:fixed; inset:0; background: rgba(10,8,6,0.92); z-index: 90; display:flex; align-items:center; justify-content:center; padding: 30px; }
+      .zoom-imagen{ max-width: 100%; max-height: 92vh; object-fit: contain; border-radius: 2px; }
+      .zoom-cerrar{ position:absolute; top:20px; right:20px; background: rgba(255,255,255,0.1); border:none; color:white; padding:8px; border-radius: 50%; }
+      .zoom-flecha{ position:absolute; top:50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border:none; color:white; padding:10px; border-radius: 50%; }
+      .zoom-flecha-izq{ left: 20px; }
+      .zoom-flecha-der{ right: 20px; }
+
+      /* ---- Subida de fotos (admin) ---- */
+      .subir-fotos{ display:flex; flex-direction:column; gap: 10px; }
+      .boton-subir{ display:inline-flex; align-items:center; gap:8px; background: var(--beige); border: 1px dashed #b7a374; color:#4a4030; padding: 10px 14px; border-radius: var(--radio); font-size: 13px; font-weight:600; cursor:pointer; align-self:flex-start; }
+      .boton-subir:hover{ border-color: var(--oro); }
+      .miniaturas-admin{ display:flex; gap:10px; flex-wrap:wrap; }
+      .miniatura-admin{ position:relative; width: 72px; height:72px; border-radius: var(--radio); overflow:hidden; border:1px solid #e2d8c3; }
+      .miniatura-admin img{ width:100%; height:100%; object-fit:cover; }
+      .miniatura-admin button{ position:absolute; top:2px; right:2px; background: rgba(0,0,0,0.6); color:white; border:none; border-radius: 50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; }
+      .miniatura-logo{ width: 96px; height: 64px; background: var(--negro); }
+      .miniatura-logo img{ object-fit: contain; }
+      .miniatura-banner{ width: 160px; height:72px; }
+      .girando{ animation: girar 0.9s linear infinite; }
+      @keyframes girar{ from{ transform: rotate(0deg); } to{ transform: rotate(360deg); } }
     `}</style>
   );
 }
